@@ -3,10 +3,6 @@ import torch
 import numpy as np
 
 
-
-
-# U, S , Vh = np.linalg.svd(matrix_vertex.T,full_matrices=False)
-
 def display(v , f,color=None):
     
     if v.shape[0] != 3:
