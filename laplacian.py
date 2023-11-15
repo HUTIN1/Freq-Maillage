@@ -1,8 +1,10 @@
-import numpy as np
 import torch
-from functools import cache
-import utils
+from functools import cache 
+#garde en cache le output de la fonction et le input, car si on redemande le meme input à la fonction le @cache retournera le resultat deja calculé
 from tqdm import tqdm
+
+import utils
+
 
 @cache
 def adjancy_matrix(nvertex , f):
@@ -73,9 +75,11 @@ def diffusion_maps(v,f,alpha=0.5):
     eigenValues , eigenVectors = torch.linalg.eigh(M)
     idx = eigenValues.argsort(descending= True)
 
-    eigenValues = eigenValues[idx]
-    eigenVectors = eigenVectors[:,idx]
+    # eigenValues = eigenValues[idx]
+    # eigenVectors = eigenVectors[:,idx]
     d_maps = torch.matmul(D,eigenVectors)
+    print(f' dmaps shape {d_maps.shape}')
+
 
     return d_maps[:,:3]
 
@@ -98,31 +102,20 @@ def svd(v,number):
 
 #the first eig value of laplacian graph is 0
 def MeshReconstruction(v,f,number):
-    # Lapla = graph_laplacian(v,f)
-    Lapla = laplacian_cotangent(v,f)
+    Lapla = graph_laplacian(v,f)
+    # Lapla = laplacian_cotangent(v,f)
     L, V = torch.linalg.eig(Lapla)
     
     L = L.type(torch.float32)
     V = V.type(torch.float32)
-    idx = L.argsort(descending = True)
-    # L = L[idx]
-    # V = V[:,idx]
-    print(f'eig value {L}')
+
     invr = [i for i in range(number,0,-1)]
     M = V[:,invr].cuda()
-    # l = M @ torch.diag(L).cuda()[:number,:number] @ M.t()
+
     l = V[:,:number] @ torch.diag(L).cuda()[:number,:number] @ V[:,:number].t()
-    vp = Lapla @ v #l 5x8 v 8x3 = 5x3
-    # v_reconstruction = vp.t() @ torch.linalg.pinv(l) #vp.t 3x5 linv 8x5 
+    vp = Lapla @ v 
     v_reconstruction = torch.linalg.pinv(l) @ vp
-    # v_reconstruction = torch.linalg.pinv(Lapla) @ vp
-    # print(f'Lapla shape {Lapla.shape}')
-    # print(f'v shape {v.shape}')
-    # print(f' vp shape {vp.shape}')
-    # print(f'vp.t() shape {vp.t().shape}')
-    # print(f'l shape {l.shape}')
-    # print(f'l pinv shape {torch.linalg.pinv(l).shape}')
-    # print(f'v_reconstruction shape {v_reconstruction.shape}')
+
     return v_reconstruction
 
 
@@ -132,7 +125,7 @@ def laplacian_cotangent(v,f):
     Laplace–Beltrami (Intrinsic Laplacian)
 
     Lij = | 1/2 (cot(alpha) + cot(beta)) if {i,j} in E (edge)
-          | - sum_(i dif j) Lij           if i=j
+          | - sum_(i dif j) Lij          if i=j
           | 0                            otherwise
                 r = row
                    /|\
@@ -156,43 +149,7 @@ q = d[0] |alpha  rs |   beta   | t = d[1]
     L = torch.zeros((nbvertices,nbvertices)).cuda()
     pbar = tqdm(desc="Compute Laplace–Beltrami",total=nbvertices**2/2-nbvertices)
     for row in range(nbvertices):
-        # print(f'W : {W[row,row+1:]}')
-        # idxcol = torch.where(W[row,row+1:]==1)[0]
-        # print(f'idx col {idxcol}')
 
-        # r = v[row,:]
-        # s = v[idxcol,:]
-        # print('s',s)
-
-        # b, _ = torch.where(f == row)
-        # c = torch.argwhere(f.unsqueeze(0).expand(s.shape[0],-1,-1) == idxcol.unsqueeze(1).unsqueeze(2))
-        # print('b',b.unsqueeze(0).expand(c.shape[0],-1),'c',c.unsqueeze(-1))
-        # d = torch.where(b.unsqueeze(0).expand(c.shape[0],-1) == c[:,1].unsqueeze(-1))
-        # print('d',d)
-        # q_idxf = c[range(0,c.shape[0],2),:]
-        # t_idxf = c[range(1,c.shape[0],2),:]
-        # print('q_idxf',q_idxf)
-
-        # q = v[q_idxf[:,1:]]
-        # t = v[t_idxf[:,1:]]
-        # print('q',q)
-
-        # rs = torch.dist(r,s)
-        # qr = torch.dist(q,r)
-        # qs = torch.dist(q,s)
-        # rt = torch.dist(t,r)
-        # st = torch.dist(t,s)
-
-        # wcos = (qr**2 + qs**2 - rs)/(2*qr*qs)
-        # wsin = torch.sqrt(1 - wcos**2)
-        # wcot = wcos / wsin
-
-        # zcos = (rt**2 + st**2 - rs)/(2*rt*st)
-        # zsin = torch.sqrt(1 - zcos**2)
-        # zcot = zcos / zsin
-
-        # L[row,row+1:] = 1/2*(wcot + zcot)
-        # L[row+1:,row] = L[row,row+1:]
 
         for col in range(row+1,nbvertices):
             if W[row,col] == 1 :
@@ -200,19 +157,18 @@ q = d[0] |alpha  rs |   beta   | t = d[1]
                 r = v[row,:]
                 s = v[col,:]
                 
-                b, b2 = torch.where(f == row)
-                c , c2 = torch.where(f == col)
-                d ,d2 = torch.where(b.unsqueeze(0).expand(c.shape[0],-1) == c.unsqueeze(-1))
-                # print('f',f)
-                # print('b',b,'b2',b2)
-                # print('c',c,'c2',c2)
-                # print('d',d,'d2',d2)
+                # b, b2 = torch.where(f == row)
+                # c , c2 = torch.where(f == col)
+                # d ,d2 = torch.where(b.unsqueeze(0).expand(c.shape[0],-1) == c.unsqueeze(-1))
+                b = torch.argwhere(W[row,:]).squeeze()
+                c = torch.argwhere(W[col,:]).squeeze()
+
+
+                d, d2 = torch.where(b.unsqueeze(1).expand(-1,c.shape[0]) == c)
+
                 
-                q = v[torch.sum(f[b[d2[0]],:],None) - f[b[d2[0]],b2[d2[0]]] - f[b[d2[0]],c2[d[0]]],:]
-                qidx = torch.sum(f[b[d2[0]],:],None) - f[b[d2[0]],b2[d2[0]]] - f[b[d2[0]],c2[d[0]]]
-                tidx = torch.sum(f[b[d2[1]],:],None) - f[b[d2[1]],b2[d2[1]]] - f[b[d2[1]],c2[d[1]]]
-                
-                t = v[torch.sum(f[b[d2[1]],:],None) - f[b[d2[1]],b2[d2[1]]] - f[b[d2[1]],c2[d[1]]],:]
+                q = v[b[d[0]],:]
+                t = v[b[d[1]],:]
 
                 # print('f',f)
                 # print('qidx',qidx,'tidx',tidx)
@@ -239,6 +195,11 @@ q = d[0] |alpha  rs |   beta   | t = d[1]
             pbar.update(1)
 
     l = range(nbvertices)
-    L[l,l] = torch.sum(L,None)
+    L[l,l] = -torch.sum(L,None)
+
+    # L = torch.nn.functional.normalize(L)
+
 
     return L
+
+
