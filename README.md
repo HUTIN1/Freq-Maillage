@@ -35,3 +35,6 @@ La fonction inv_pow calcule l'inverse de la puissance des coefficients de la mat
 
 ### Main
 Le fichier main à pour vocation à être utiliser pour implémenter ce que l'on souhaite avec les fonctions crée dans les différents fichiers.
+
+### Fichier OBJ
+Des fichiers .OBJ sont trouvable dans release pour essayer les différentes fonctionnalités implémenter. Attention, il est possible que certains maillages fassent crash le code.
